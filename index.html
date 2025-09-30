@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Indian Railway Multi-Station Simulator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(to bottom, #1a1a2e 0%, #16213e 100%);
+            overflow-x: auto;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: #fff;
+            text-align: center;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .subtitle {
+            color: #ff9933;
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .controls {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        button {
+            background: linear-gradient(145deg, #0f3460, #16213e);
+            color: #fff;
+            border: 2px solid #00d4ff;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: linear-gradient(145deg, #16213e, #0f3460);
+            box-shadow: 0 0 15px rgba(0,212,255,0.5);
+        }
+
+        .main-layout {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 20px;
+        }
+
+        .stations-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .station-wrapper {
+            background: #0f3460;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            overflow-x: auto;
+        }
+
+        .station-header {
+            color: #ff9933;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .station-code {
+            background: #138808;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .station {
+            position: relative;
+            width: 1200px;
+            height: 400px;
+            background: #1a1a2e;
+            border: 2px solid #00d4ff;
+            border-radius: 10px;
+        }
+
+        .track {
+            position: absolute;
+            height: 4px;
+            background: linear-gradient(to right, #666 0%, #999 50%, #666 100%);
+            width: 100%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .track::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 8px;
+            top: -2px;
+            background: repeating-linear-gradient(
+                90deg,
+                transparent,
+                transparent 15px,
+                #555 15px,
+                #555 17px
+            );
+        }
+
+        .platform {
+            position: absolute;
+            height: 50px;
+            background: linear-gradient(to bottom, #4a4a4a, #2a2a2a);
+            border: 2px solid #666;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-weight: bold;
+            font-size: 12px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+
+        .signal {
+            position: absolute;
+            width: 20px;
+            height: 50px;
+            background: #333;
+            border-radius: 3px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-around;
+            padding: 5px 0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+        }
+
+        .signal-light {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #222;
+            border: 1px solid #444;
+            transition: all 0.3s;
+        }
+
+        .signal-light.red {
+            background: #ff0000;
+            box-shadow: 0 0 10px #ff0000;
+        }
+
+        .signal-light.yellow {
+            background: #ffff00;
+            box-shadow: 0 0 10px #ffff00;
+        }
+
+        .signal-light.green {
+            background: #00ff00;
+            box-shadow: 0 0 10px #00ff00;
+        }
+
+        .switch {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            cursor: pointer;
+            z-index: 10;
+        }
+
+        .switch-indicator {
+            position: absolute;
+            width: 35px;
+            height: 35px;
+            background: #333;
+            border: 2px solid #00d4ff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            color: #00d4ff;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .switch-indicator:hover {
+            background: #444;
+            box-shadow: 0 0 15px rgba(0,212,255,0.5);
+        }
+
+        .switch-indicator.straight {
+            background: #00d4ff;
+            color: #000;
+        }
+
+        .switch-indicator.diverge {
+            background: #ff6b00;
+            color: #fff;
+            border-color: #ff6b00;
+        }
+
+        .switch-track {
+            position: absolute;
+            height: 4px;
+            background: linear-gradient(to right, #999 0%, #00d4ff 50%, #999 100%);
+            transform-origin: left center;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+
+        .switch-track.active {
+            background: linear-gradient(to right, #ff6b00 0%, #ffaa00 50%, #ff6b00 100%);
+            box-shadow: 0 0 10px rgba(255, 107, 0, 0.5);
+        }
+
+        .train {
+            position: absolute;
+            height: 30px;
+            display: flex;
+            transition: left 0.1s linear;
+            z-index: 5;
+        }
+
+        .locomotive {
+            width: 60px;
+            height: 30px;
+            background: linear-gradient(145deg, #e74c3c, #c0392b);
+            border-radius: 5px 15px 15px 5px;
+            border: 2px solid #a93226;
+            position: relative;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+
+        .locomotive::before {
+            content: '';
+            position: absolute;
+            top: 5px;
+            left: 10px;
+            width: 15px;
+            height: 8px;
+            background: #fff;
+            border-radius: 2px;
+            opacity: 0.7;
+        }
+
+        .locomotive::after {
+            content: '';
+            position: absolute;
+            top: 5px;
+            right: 10px;
+            width: 15px;
+            height: 8px;
+            background: #fff;
+            border-radius: 2px;
+            opacity: 0.7;
+        }
+
+        .cargo {
+            width: 50px;
+            height: 28px;
+            background: linear-gradient(145deg, #3498db, #2980b9);
+            border: 2px solid #2471a3;
+            border-radius: 3px;
+            margin-left: 5px;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+        }
+
+        .label {
+            position: absolute;
+            color: #00d4ff;
+            font-size: 11px;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+        }
+
+        .log-panel {
+            background: rgba(15, 52, 96, 0.95);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            height: fit-content;
+            max-height: 90vh;
+            overflow-y: auto;
+            border: 2px solid #ff9933;
+        }
+
+        .log-header {
+            color: #ff9933;
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            text-align: center;
+            border-bottom: 2px solid #138808;
+            padding-bottom: 10px;
+        }
+
+        .log-entry {
+            background: rgba(0,0,0,0.3);
+            padding: 10px;
+            margin-bottom: 8px;
+            border-radius: 5px;
+            border-left: 4px solid #138808;
+            font-size: 13px;
+            color: #fff;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .log-time {
+            color: #00d4ff;
+            font-weight: bold;
+            font-size: 11px;
+        }
+
+        .log-train {
+            color: #ff9933;
+            font-weight: bold;
+        }
+
+        .log-station {
+            color: #138808;
+            font-weight: bold;
+        }
+
+        .log-action {
+            color: #ffd700;
+        }
+
+        .info-panel {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            color: #fff;
+        }
+
+        .info-panel h3 {
+            color: #00d4ff;
+            margin-bottom: 10px;
+        }
+
+        .info-item {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+
+        .train-name-badge {
+            position: absolute;
+            top: -20px;
+            left: 0;
+            background: #138808;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 10px;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚂 Indian Railway Multi-Station Simulator</h1>
+        <div class="subtitle">भारतीय रेलवे स्टेशन सिमुलेटर</div>
+        
+        <div class="controls">
+            <button onclick="addIndianTrain('station1', 'main1')">Add Train to Delhi</button>
+            <button onclick="addIndianTrain('station2', 'main1')">Add Train to Mumbai</button>
+            <button onclick="addIndianTrain('station3', 'main1')">Add Train to Chennai</button>
+            <button onclick="toggleAllSignals()">Change All Signals to Green</button>
+            <button onclick="clearTrains()">Clear All Trains</button>
+            <button onclick="clearLogs()">Clear Logs</button>
+        </div>
+
+        <div class="main-layout">
+            <div class="stations-container">
+                <div class="station-wrapper">
+                    <div class="station-header">
+                        <span>New Delhi Railway Station - नई दिल्ली</span>
+                        <span class="station-code">NDLS</span>
+                    </div>
+                    <div class="station" id="station1" data-name="Delhi" data-code="NDLS"></div>
+                </div>
+
+                <div class="station-wrapper">
+                    <div class="station-header">
+                        <span>Mumbai Central - मुंबई सेंट्रल</span>
+                        <span class="station-code">MMCT</span>
+                    </div>
+                    <div class="station" id="station2" data-name="Mumbai" data-code="MMCT"></div>
+                </div>
+
+                <div class="station-wrapper">
+                    <div class="station-header">
+                        <span>Chennai Central - चेन्नई सेंट्रल</span>
+                        <span class="station-code">MAS</span>
+                    </div>
+                    <div class="station" id="station3" data-name="Chennai" data-code="MAS"></div>
+                </div>
+            </div>
+
+            <div class="log-panel" id="logPanel">
+                <div class="log-header">🚉 Train Movement Log<br>रेल आवागमन लॉग</div>
+                <div id="logContainer"></div>
+            </div>
+        </div>
+
+        <div class="info-panel">
+            <h3>System Information</h3>
+            <div class="info-item">🚉 Active Trains: <span id="trainCount">0</span></div>
+            <div class="info-item">🚦 Click signals to change: Red → Yellow → Green</div>
+            <div class="info-item">🔀 Click switches: Blue (straight) ↔ Orange (diverge 45°)</div>
+            <div class="info-item">📋 All train movements are logged in real-time</div>
+        </div>
+    </div>
+
+    <script>
+        const trains = [];
+        let trainIdCounter = 0;
+        const signals = [];
+        const switches = [];
+
+        const indianTrainNames = [
+            'Rajdhani Express', 'Shatabdi Express', 'Duronto Express', 'Garib Rath',
+            'Humsafar Express', 'Tejas Express', 'Vande Bharat', 'Jan Shatabdi',
+            'Sampark Kranti', 'Yuva Express', 'Double Decker', 'Gatimaan Express',
+            'Karnataka Express', 'Tamil Nadu Express', 'Kerala Express', 'Bombay Mail'
+        ];
+
+        const trackConfig = {
+            main1: { y: 60, label: 'Main Line 1 (Up)' },
+            main2: { y: 130, label: 'Main Line 2 (Down)' },
+            platform1: { y: 200, label: 'Platform 1' },
+            platform2: { y: 270, label: 'Platform 2' },
+            loop1: { y: 340, label: 'Loop Line' }
+        };
+
+        function initStation(stationId) {
+            const station = document.getElementById(stationId);
+            const stationName = station.dataset.name;
+            const stationCode = station.dataset.code;
+
+            // Create tracks
+            Object.entries(trackConfig).forEach(([id, config]) => {
+                const track = document.createElement('div');
+                track.className = 'track';
+                track.style.top = config.y + 'px';
+                track.id = `${stationId}-track-${id}`;
+                station.appendChild(track);
+
+                const label = document.createElement('div');
+                label.className = 'label';
+                label.textContent = config.label;
+                label.style.top = (config.y - 20) + 'px';
+                label.style.left = '10px';
+                station.appendChild(label);
+            });
+
+            // Create platforms
+            createPlatform(station, 400, 190, 300, 'Platform 1');
+            createPlatform(station, 400, 260, 300, 'Platform 2');
+
+            // Create signals
+            createSignal(station, stationId, 200, trackConfig.main1.y - 35, 'main1', 'green');
+            createSignal(station, stationId, 500, trackConfig.main1.y - 35, 'main1', 'red');
+            createSignal(station, stationId, 800, trackConfig.main1.y - 35, 'main1', 'green');
+            
+            createSignal(station, stationId, 300, trackConfig.main2.y - 35, 'main2', 'green');
+            createSignal(station, stationId, 600, trackConfig.main2.y - 35, 'main2', 'yellow');
+            
+            createSignal(station, stationId, 350, trackConfig.platform1.y - 35, 'platform1', 'green');
+            createSignal(station, stationId, 650, trackConfig.platform1.y - 35, 'platform1', 'red');
+            
+            createSignal(station, stationId, 400, trackConfig.platform2.y - 35, 'platform2', 'green');
+            createSignal(station, stationId, 700, trackConfig.platform2.y - 35, 'platform2', 'red');
+
+            // Create switches
+            createDivergingSwitch(station, stationId, 180, trackConfig.main1.y, 'sw1', 'main1', 'main2', 'right');
+            createDivergingSwitch(station, stationId, 350, trackConfig.main1.y, 'sw2', 'main1', 'platform1', 'right');
+            createDivergingSwitch(station, stationId, 550, trackConfig.main2.y, 'sw3', 'main2', 'platform2', 'right');
+            createDivergingSwitch(station, stationId, 750, trackConfig.platform1.y, 'sw4', 'platform1', 'loop1', 'right');
+
+            addLog(`System initialized at ${stationName} (${stationCode})`, '', 'SYSTEM');
+        }
+
+        function createPlatform(station, x, y, width, label) {
+            const platform = document.createElement('div');
+            platform.className = 'platform';
+            platform.style.left = x + 'px';
+            platform.style.top = y + 'px';
+            platform.style.width = width + 'px';
+            platform.textContent = label;
+            station.appendChild(platform);
+        }
+
+        function createSignal(station, stationId, x, y, trackId, initialState) {
+            const signal = document.createElement('div');
+            signal.className = 'signal';
+            signal.style.left = x + 'px';
+            signal.style.top = y + 'px';
+
+            const redLight = document.createElement('div');
+            redLight.className = 'signal-light' + (initialState === 'red' ? ' red' : '');
+            
+            const yellowLight = document.createElement('div');
+            yellowLight.className = 'signal-light' + (initialState === 'yellow' ? ' yellow' : '');
+            
+            const greenLight = document.createElement('div');
+            greenLight.className = 'signal-light' + (initialState === 'green' ? ' green' : '');
+
+            signal.appendChild(redLight);
+            signal.appendChild(yellowLight);
+            signal.appendChild(greenLight);
+            station.appendChild(signal);
+
+            const signalObj = {
+                element: signal,
+                stationId: stationId,
+                x: x,
+                trackId: trackId,
+                state: initialState,
+                lights: { red: redLight, yellow: yellowLight, green: greenLight }
+            };
+
+            signals.push(signalObj);
+
+            signal.onclick = () => toggleSignal(signalObj);
+        }
+
+        function toggleSignal(signalObj) {
+            const oldState = signalObj.state;
+            signalObj.lights.red.classList.remove('red');
+            signalObj.lights.yellow.classList.remove('yellow');
+            signalObj.lights.green.classList.remove('green');
+
+            if (signalObj.state === 'red') {
+                signalObj.state = 'yellow';
+                signalObj.lights.yellow.classList.add('yellow');
+            } else if (signalObj.state === 'yellow') {
+                signalObj.state = 'green';
+                signalObj.lights.green.classList.add('green');
+            } else {
+                signalObj.state = 'red';
+                signalObj.lights.red.classList.add('red');
+            }
+
+            const station = document.getElementById(signalObj.stationId);
+            const stationName = station.dataset.name;
+            addLog(`Signal changed from ${oldState.toUpperCase()} to ${signalObj.state.toUpperCase()}`, '', stationName);
+        }
+
+        function toggleAllSignals() {
+            signals.forEach(signal => {
+                if (signal.state !== 'green') {
+                    signal.lights.red.classList.remove('red');
+                    signal.lights.yellow.classList.remove('yellow');
+                    signal.lights.green.classList.add('green');
+                    signal.state = 'green';
+                }
+            });
+            addLog('All signals set to GREEN across all stations', '', 'SYSTEM');
+        }
+
+        function createDivergingSwitch(station, stationId, x, y, id, straightTrack, divergeTrack, direction) {
+            const switchEl = document.createElement('div');
+            switchEl.className = 'switch';
+            switchEl.style.left = x + 'px';
+            switchEl.style.top = (y - 30) + 'px';
+
+            const indicator = document.createElement('div');
+            indicator.className = 'switch-indicator straight';
+            indicator.innerHTML = '─';
+            switchEl.appendChild(indicator);
+
+            const divergeY = trackConfig[divergeTrack].y;
+            const yDiff = Math.abs(divergeY - y);
+            const length = Math.sqrt(Math.pow(150, 2) + Math.pow(yDiff, 2));
+            const angle = direction === 'right' ? 
+                Math.atan2(divergeY - y, 150) * 180 / Math.PI :
+                Math.atan2(y - divergeY, 150) * 180 / Math.PI;
+
+            const divergeLine = document.createElement('div');
+            divergeLine.className = 'switch-track';
+            divergeLine.style.width = length + 'px';
+            divergeLine.style.left = x + 'px';
+            divergeLine.style.top = y + 'px';
+            divergeLine.style.transform = `rotate(${angle}deg)`;
+            divergeLine.style.opacity = '0.3';
+            station.appendChild(divergeLine);
+
+            const switchObj = {
+                element: switchEl,
+                indicator: indicator,
+                divergeLine: divergeLine,
+                stationId: stationId,
+                x: x,
+                y: y,
+                straightTrack: straightTrack,
+                divergeTrack: divergeTrack,
+                position: 'straight',
+                direction: direction
+            };
+
+            switches.push(switchObj);
+
+            switchEl.onclick = () => {
+                const stationEl = document.getElementById(stationId);
+                const stationName = stationEl.dataset.name;
+                
+                if (switchObj.position === 'straight') {
+                    switchObj.position = 'diverge';
+                    indicator.classList.remove('straight');
+                    indicator.classList.add('diverge');
+                    indicator.innerHTML = direction === 'right' ? '╱' : '╲';
+                    divergeLine.classList.add('active');
+                    divergeLine.style.opacity = '1';
+                    addLog(`Switch set to DIVERGE (${straightTrack} → ${divergeTrack})`, '', stationName);
+                } else {
+                    switchObj.position = 'straight';
+                    indicator.classList.remove('diverge');
+                    indicator.classList.add('straight');
+                    indicator.innerHTML = '─';
+                    divergeLine.classList.remove('active');
+                    divergeLine.style.opacity = '0.3';
+                    addLog(`Switch set to STRAIGHT (${straightTrack})`, '', stationName);
+                }
+            };
+        }
+
+        function addIndianTrain(stationId, trackId) {
+            const station = document.getElementById(stationId);
+            const stationName = station.dataset.name;
+            const stationCode = station.dataset.code;
+            const trainName = indianTrainNames[Math.floor(Math.random() * indianTrainNames.length)];
+            const trainNumber = 12000 + Math.floor(Math.random() * 8000);
+
+            const train = {
+                id: trainIdCounter++,
+                name: `${trainNumber} ${trainName}`,
+                stationId: stationId,
+                trackId: trackId,
+                x: 0,
+                speed: 1.5 + Math.random() * 1.5,
+                element: null,
+                lastLoggedPosition: -1
+            };
+
+            const trainEl = document.createElement('div');
+            trainEl.className = 'train';
+            trainEl.style.top = (trackConfig[trackId].y - 15) + 'px';
+            trainEl.style.left = '0px';
+
+            const badge = document.createElement('div');
+            badge.className = 'train-name-badge';
+            badge.textContent = train.name;
+            trainEl.appendChild(badge);
+
+            const loco = document.createElement('div');
+            loco.className = 'locomotive';
+            trainEl.appendChild(loco);
+
+            const cargoCount = 3 + Math.floor(Math.random() * 4);
+            for (let i = 0; i < cargoCount; i++) {
+                const cargo = document.createElement('div');
+                cargo.className = 'cargo';
+                trainEl.appendChild(cargo);
+            }
+
+            station.appendChild(trainEl);
+            train.element = trainEl;
+            trains.push(train);
+
+            updateTrainCount();
+            addLog(`Departed from ${stationName}`, train.name, stationName);
+        }
+
+        function clearTrains() {
+            trains.forEach(train => {
+                if (train.element && train.element.parentNode) {
+                    train.element.parentNode.removeChild(train.element);
+                }
+            });
+            trains.length = 0;
+            updateTrainCount();
+            addLog('All trains cleared from system', '', 'SYSTEM');
+        }
+
+        function clearLogs() {
+            document.getElementById('logContainer').innerHTML = '';
+            addLog('Log cleared', '', 'SYSTEM');
+        }
+
+        function updateTrainCount() {
+            document.getElementById('trainCount').textContent = trains.length;
+        }
+
+        function checkSignal(train) {
+            const relevantSignals = signals.filter(s => 
+                s.stationId === train.stationId &&
+                s.trackId === train.trackId && 
+                s.x > train.x && 
+                s.x < train.x + 100
+            );
+
+            if (relevantSignals.length > 0) {
+                const nearestSignal = relevantSignals[0];
+                const distance = nearestSignal.x - train.x;
+                
+                if (nearestSignal.state === 'red' && distance < 50) {
+                    if (train.lastLoggedPosition !== nearestSignal.x) {
+                        const station = document.getElementById(train.stationId);
+                        addLog(`Stopped at RED signal (distance: ${Math.round(distance)}m)`, train.name, station.dataset.name);
+                        train.lastLoggedPosition = nearestSignal.x;
+                    }
+                    return 0;
+                } else if (nearestSignal.state === 'yellow') {
+                    if (train.lastLoggedPosition !== nearestSignal.x) {
+                        const station = document.getElementById(train.stationId);
+                        addLog(`Slowing at YELLOW signal (distance: ${Math.round(distance)}m)`, train.name, station.dataset.name);
+                        train.lastLoggedPosition = nearestSignal.x;
+                    }
+                    return 0.4;
+                } else if (nearestSignal.state === 'green' && distance < 30) {
+                    if (train.lastLoggedPosition !== nearestSignal.x) {
+                        const station = document.getElementById(train.stationId);
+                        addLog(`Cleared GREEN signal`, train.name, station.dataset.name);
+                        train.lastLoggedPosition = nearestSignal.x;
+                    }
+                }
+            }
+            return 1;
+        }
+
+        function animateTrains() {
+            trains.forEach((train, index) => {
+                const speedMultiplier = checkSignal(train);
+                train.x += train.speed * speedMultiplier;
+
+                // Check for switches
+                switches.forEach(sw => {
+                    if (sw.stationId === train.stationId && 
+                        sw.straightTrack && 
+                        Math.abs(train.x - sw.x) < 5 && 
+                        train.trackId === sw.straightTrack) {
+                        if (sw.position === 'diverge') {
+                            const oldTrack = train.trackId;
+                            train.trackId = sw.divergeTrack;
+                            train.element.style.top = (trackConfig[train.trackId].y - 15) + 'px';
+                            
+                            const station = document.getElementById(train.stationId);
+                            addLog(`Diverted from ${oldTrack} to ${train.trackId}`, train.name, station.dataset.name);
+                        }
+                    }
+                });
+
+                // Check for platform stops
+                if ((train.trackId === 'platform1' || train.trackId === 'platform2') && 
+                    train.x > 400 && train.x < 700 && 
+                    train.lastLoggedPosition < 400) {
+                    const station = document.getElementById(train.stationId);
+                    addLog(`Arrived at platform, stopping for passengers`, train.name, station.dataset.name);
+                    train.lastLoggedPosition = 500;
+                }
+
+                if (train.x > 1200) {
+                    train.x = -200;
+                    const station = document.getElementById(train.stationId);
+                    addLog(`Exited station and continuing journey`, train.name, station.dataset.name);
+                    train.lastLoggedPosition = -1;
+                }
+
+                train.element.style.left = train.x + 'px';
+            });
+
+            requestAnimationFrame(animateTrains);
+        }
+
+        function addLog(message, trainName, stationName) {
+            const logContainer = document.getElementById('logContainer');
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('en-IN', { 
+                hour: '2-digit', 
+                minute: '2-digit', 
+                second: '2-digit',
+                hour12: false 
+            });
+
+            let logHTML = `<span class="log-time">[${timeStr}]</span> `;
+            
+            if (stationName) {
+                logHTML += `<span class="log-station">[${stationName}]</span> `;
+            }
+            
+            if (trainName) {
+                logHTML += `<span class="log-train">${trainName}</span>: `;
+            }
+            
+            logHTML += `<span class="log-action">${message}</span>`;
+
+            logEntry.innerHTML = logHTML;
+            logContainer.insertBefore(logEntry, logContainer.firstChild);
+
+            // Keep only last 50 logs
+            while (logContainer.children.length > 50) {
+                logContainer.removeChild(logContainer.lastChild);
+            }
+
+            // Auto-scroll to top
+            const logPanel = document.getElementById('logPanel');
+            logPanel.scrollTop = 0;
+        }
+
+        // Initialize all stations
+        initStation('station1');
+        initStation('station2');
+        initStation('station3');
+        
+        // Start animation
+        animateTrains();
+
+        // Add welcome message
+        addLog('Indian Railway Multi-Station Simulator started successfully', '', 'SYSTEM');
+    </script>
+</body>
+</html>
